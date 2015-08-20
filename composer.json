@@ -1,0 +1,8 @@
+{
+    "name": "getherbie/plugin-menu",
+    "homepage": "http://www.getherbie.org",
+    "description": "Herbie Menu Plugin.",
+    "keywords": ["herbie", "plugin", "menu"],
+    "type": "herbie-plugin",
+    "license": "BSD-3-Clause"
+}
