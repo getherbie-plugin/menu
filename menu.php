@@ -1,52 +1,47 @@
 <?php
 
-/**
- * This file is part of Herbie.
- *
- * (c) Thomas Breuss <www.tebe.ch>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+use Herbie\DI;
+use Herbie\Hook;
 
-namespace herbie\plugin\menu;
-
-use Herbie;
-use Twig_SimpleFunction;
-
-class MenuPlugin extends Herbie\Plugin
+class MenuPlugin
 {
 
-    public function onTwigInitialized($twig)
+    public static function install()
+    {
+        Hook::attach('twigInitialized', ['MenuPlugin', 'addTwigFunctions']);
+        Hook::attach('shortcodeInitialized', ['MenuPlugin', 'addShortcodes']);
+    }
+
+    public static function addTwigFunctions($twig)
     {
         $options = ['is_safe' => ['html']];
         $twig->addFunction(
-            new Twig_SimpleFunction('menu_ascii', [$this, 'functionAscii'], $options)
+            new \Twig_SimpleFunction('menu_ascii', ['MenuPlugin', 'functionAscii'], $options)
         );
         $twig->addFunction(
-            new Twig_SimpleFunction('menu_breadcrumb', [$this, 'functionBreadcrumb'], $options)
+            new \Twig_SimpleFunction('menu_breadcrumb', ['MenuPlugin', 'functionBreadcrumb'], $options)
         );
         $twig->addFunction(
-            new Twig_SimpleFunction('menu_html', [$this, 'functionHtml'], $options)
+            new \Twig_SimpleFunction('menu_html', ['MenuPlugin', 'functionHtml'], $options)
         );
         $twig->addFunction(
-            new Twig_SimpleFunction('menu_sitemap', [$this, 'functionSitemap'], $options)
+            new \Twig_SimpleFunction('menu_sitemap', ['MenuPlugin', 'functionSitemap'], $options)
         );
     }
 
-    public function onShortcodeInitialized($shortcode)
+    public static function addShortcodes($shortcode)
     {
-        $shortcode->add('menu_ascii', [$this, 'functionAsciiTree']);
-        $shortcode->add('menu_breadcrumb', [$this, 'functionBreadcrumb']);
-        $shortcode->add('menu_html', [$this, 'functionHtml']);
-        $shortcode->add('menu_sitemap', [$this, 'functionSitemap']);
+        $shortcode->add('menu_ascii', ['MenuPlugin', 'functionAsciiTree']);
+        $shortcode->add('menu_breadcrumb', ['MenuPlugin', 'functionBreadcrumb']);
+        $shortcode->add('menu_html', ['MenuPlugin', 'functionHtml']);
+        $shortcode->add('menu_sitemap', ['MenuPlugin', 'functionSitemap']);
     }
 
     /**
      * @param array $options
      * @return string
      */
-    public function functionAsciiTree($options)
+    public static function functionAsciiTree($options)
     {
         $options = (array)$options;
         extract($options); // showHidden, route, maxDepth, class
@@ -55,7 +50,7 @@ class MenuPlugin extends Herbie\Plugin
         $maxDepth = isset($maxDepth) ? (int)$maxDepth : -1;
         $class = isset($class) ? (string)$class : 'sitemap';
 
-        $branch = $this->getService('Menu\Page\Node')->findByRoute($route);
+        $branch = DI::get('Menu\Page\Node')->findByRoute($route);
         $treeIterator = new Herbie\Menu\Page\Iterator\TreeIterator($branch);
         $filterIterator = new Herbie\Menu\Page\Iterator\FilterIterator($treeIterator);
         $filterIterator->setEnabled(!$showHidden);
@@ -69,7 +64,7 @@ class MenuPlugin extends Herbie\Plugin
      * @param array $options
      * @return string
      */
-    public function functionBreadcrumb($options)
+    public static function functionBreadcrumb($options)
     {
         // Options
         $options = (array)$options;
@@ -88,11 +83,11 @@ class MenuPlugin extends Herbie\Plugin
                 $route = $homeLink;
                 $label = 'Home';
             }
-            $links[] = $this->createLink($route, $label);
+            $links[] = static::createLink($route, $label);
         }
 
-        foreach ($this->getService('Menu\Page\RootPath') as $item) {
-            $links[] = $this->createLink($item->route, $item->title);
+        foreach (DI::get('Menu\Page\RootPath') as $item) {
+            $links[] = static::createLink($item->route, $item->title);
         }
 
         if (!empty($reverse)) {
@@ -112,7 +107,7 @@ class MenuPlugin extends Herbie\Plugin
      * @param array $options
      * @return string
      */
-    public function functionHtml($options)
+    public static function functionHtml($options)
     {
         $options = (array)$options;
         extract($options); // showHidden, route, maxDepth, class
@@ -121,11 +116,11 @@ class MenuPlugin extends Herbie\Plugin
         $maxDepth = isset($maxDepth) ? (int)$maxDepth : -1;
         $class = isset($class) ? (string)$class : 'menu';
 
-        $branch = $this->getService('Menu\Page\Node')->findByRoute($route);
+        $branch = DI::get('Menu\Page\Node')->findByRoute($route);
         $treeIterator = new Herbie\Menu\Page\Iterator\TreeIterator($branch);
 
         // using FilterCallback for better filtering of nested items
-        $routeLine = $this->getService('Request')->getRouteLine();
+        $routeLine = DI::get('Request')->getRouteLine();
         $callback = [new Herbie\Menu\Page\Iterator\FilterCallback($routeLine, $showHidden), 'call'];
         $filterIterator = new \RecursiveCallbackFilterIterator($treeIterator, $callback);
 
@@ -134,17 +129,17 @@ class MenuPlugin extends Herbie\Plugin
         $htmlTree->setClass($class);
         $htmlTree->itemCallback = function ($node) {
             $menuItem = $node->getMenuItem();
-            $href = $this->getService('Url\UrlGenerator')->generate($menuItem->route);
+            $href = DI::get('Url\UrlGenerator')->generate($menuItem->route);
             return sprintf('<a href="%s">%s</a>', $href, $menuItem->title);
         };
-        return $htmlTree->render($this->getService('Request')->getRoute());
+        return $htmlTree->render(DI::get('Request')->getRoute());
     }
 
     /**
      * @param array $options
      * @return string
      */
-    public function functionSitemap($options)
+    public static function functionSitemap($options)
     {
         $options = (array)$options;
         extract($options); // showHidden, route, maxDepth, class
@@ -153,7 +148,7 @@ class MenuPlugin extends Herbie\Plugin
         $maxDepth = isset($maxDepth) ? (int)$maxDepth : -1;
         $class = isset($class) ? (string)$class : 'sitemap';
 
-        $branch = $this->getService('Menu\Page\Node')->findByRoute($route);
+        $branch = DI::get('Menu\Page\Node')->findByRoute($route);
         $treeIterator = new Herbie\Menu\Page\Iterator\TreeIterator($branch);
         $filterIterator = new Herbie\Menu\Page\Iterator\FilterIterator($treeIterator);
         $filterIterator->setEnabled(!$showHidden);
@@ -163,7 +158,7 @@ class MenuPlugin extends Herbie\Plugin
         $htmlTree->setClass($class);
         $htmlTree->itemCallback = function ($node) {
             $menuItem = $node->getMenuItem();
-            $href = $this->getService('Url\UrlGenerator')->generate($menuItem->route);
+            $href = DI::get('Url\UrlGenerator')->generate($menuItem->route);
             return sprintf('<a href="%s">%s</a>', $href, $menuItem->title);
         };
         return $htmlTree->render();
@@ -175,11 +170,26 @@ class MenuPlugin extends Herbie\Plugin
      * @param array $htmlAttributes
      * @return string
      */
-    protected function createLink($route, $label, $htmlAttributes = [])
+    protected static function createLink($route, $label, $htmlAttributes = [])
     {
-        $url = $this->getService('Url\UrlGenerator')->generate($route);
-        $attributesAsString = $this->buildHtmlAttributes($htmlAttributes);
+        $url = DI::get('Url\UrlGenerator')->generate($route);
+        $attributesAsString = static::buildHtmlAttributes($htmlAttributes);
         return sprintf('<a href="%s"%s>%s</a>', $url, $attributesAsString, $label);
     }
 
+    /**
+     * @param array $htmlOptions
+     * @return string
+     */
+    protected static function buildHtmlAttributes($htmlOptions = [])
+    {
+        $attributes = '';
+        foreach ($htmlOptions as $key => $value) {
+            $attributes .= $key . '="' . $value . '" ';
+        }
+        return trim($attributes);
+    }
+
 }
+
+MenuPlugin::install();
