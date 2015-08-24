@@ -1,7 +1,6 @@
-Menu Plugin
-===============
+# Menu Plugin
 
-** In Entwicklung **
+## In Entwicklung ##
 
 `Menu` ist ein [Herbie](http://github.com/getherbie/herbie) Plugin, das dir verschiedene
 Funktionen zur Erstellung von Menu-Elementen zur Verfügung stellt.
