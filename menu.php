@@ -87,7 +87,7 @@ class MenuPlugin
         }
 
         foreach (DI::get('Menu\Page\RootPath') as $item) {
-            $links[] = static::createLink($item->route, $item->title);
+            $links[] = static::createLink($item->route, $item->getMenuTitle());
         }
 
         if (!empty($reverse)) {
@@ -130,7 +130,7 @@ class MenuPlugin
         $htmlTree->itemCallback = function ($node) {
             $menuItem = $node->getMenuItem();
             $href = DI::get('Url\UrlGenerator')->generate($menuItem->route);
-            return sprintf('<a href="%s">%s</a>', $href, $menuItem->title);
+            return sprintf('<a href="%s">%s</a>', $href, $menuItem->getMenuTitle());
         };
         return $htmlTree->render(DI::get('Request')->getRoute());
     }
@@ -159,7 +159,7 @@ class MenuPlugin
         $htmlTree->itemCallback = function ($node) {
             $menuItem = $node->getMenuItem();
             $href = DI::get('Url\UrlGenerator')->generate($menuItem->route);
-            return sprintf('<a href="%s">%s</a>', $href, $menuItem->title);
+            return sprintf('<a href="%s">%s</a>', $href, $menuItem->getMenuTitle());
         };
         return $htmlTree->render();
     }
