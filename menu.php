@@ -144,21 +144,21 @@ class MenuPlugin
      */
     public static function functionSitemap($options)
     {
-        $options = (array)$options;
-        extract($options); // showHidden, route, maxDepth, class
-        $showHidden = isset($showHidden) ? (bool) $showHidden : false;
-        $route = isset($route) ? (string)$route : '';
-        $maxDepth = isset($maxDepth) ? (int)$maxDepth : -1;
-        $class = isset($class) ? (string)$class : 'sitemap';
+        $options = array_merge([
+            'showhidden' => false,
+            'route' => '',
+            'maxdepth' => -1,
+            'class' => 'sitemap'
+        ], (array)$options);
 
-        $branch = DI::get('Menu\Page\Node')->findByRoute($route);
+        $branch = DI::get('Menu\Page\Node')->findByRoute($options['route']);
         $treeIterator = new Herbie\Menu\Page\Iterator\TreeIterator($branch);
         $filterIterator = new Herbie\Menu\Page\Iterator\FilterIterator($treeIterator);
-        $filterIterator->setEnabled(!$showHidden);
+        $filterIterator->setEnabled(!$options['showhidden']);
 
         $htmlTree = new Herbie\Menu\Page\Renderer\HtmlTree($filterIterator);
-        $htmlTree->setMaxDepth($maxDepth);
-        $htmlTree->setClass($class);
+        $htmlTree->setMaxDepth($options['maxdepth']);
+        $htmlTree->setClass($options['class']);
         $htmlTree->itemCallback = function ($node) {
             $menuItem = $node->getMenuItem();
             $href = DI::get('Url\UrlGenerator')->generate($menuItem->route);
