@@ -43,20 +43,22 @@ class MenuPlugin
      */
     public static function functionAsciiTree($options)
     {
-        $options = (array)$options;
-        extract($options); // showHidden, route, maxDepth, class
-        $showHidden = isset($showHidden) ? (bool) $showHidden : false;
-        $route = isset($route) ? (string)$route : '';
-        $maxDepth = isset($maxDepth) ? (int)$maxDepth : -1;
-        $class = isset($class) ? (string)$class : 'sitemap';
+        $options = array_merge([
+            'maxdepth' => -1,
+            'route' => '',
+            'showhidden' => false
+        ], (array)$options);
 
-        $branch = DI::get('Menu\Page\Node')->findByRoute($route);
+        // accept valid flags only
+        $options['showhidden'] = filter_var($options['showhidden'], FILTER_VALIDATE_BOOLEAN);
+
+        $branch = DI::get('Menu\Page\Node')->findByRoute($options['route']);
         $treeIterator = new Herbie\Menu\Page\Iterator\TreeIterator($branch);
         $filterIterator = new Herbie\Menu\Page\Iterator\FilterIterator($treeIterator);
-        $filterIterator->setEnabled(!$showHidden);
+        $filterIterator->setEnabled(!$options['showhidden']);
 
         $asciiTree = new Herbie\Menu\Page\Renderer\AsciiTree($filterIterator);
-        $asciiTree->setMaxDepth($maxDepth);
+        $asciiTree->setMaxDepth($options['maxdepth']);
         return $asciiTree->render();
     }
 
@@ -66,38 +68,34 @@ class MenuPlugin
      */
     public static function functionBreadcrumb($options)
     {
-        // Options
-        $options = (array)$options;
-        extract($options);
-        $delim = isset($delim) ? $delim : '';
-        $homeLink = isset($homeLink) ? $homeLink : null;
-        $reverse = isset($reverse) ? (bool) $reverse : false;
+        $options = array_merge([
+            'delim' => '',
+            'homelabel' => 'Home',
+            'homeurl' => null,
+            'reverse' => false
+        ], (array)$options);
+
+        // accept valid flags only
+        $options['reverse'] = filter_var($options['reverse'], FILTER_VALIDATE_BOOLEAN);
 
         $links = [];
 
-        if (!empty($homeLink)) {
-            if (is_array($homeLink)) {
-                $route = reset($homeLink);
-                $label = isset($homeLink[1]) ? $homeLink[1] : 'Home';
-            } else {
-                $route = $homeLink;
-                $label = 'Home';
-            }
-            $links[] = static::createLink($route, $label);
+        if (isset($options['homeurl'])) {
+            $links[] = static::createLink($options['homeurl'], $options['homelabel']);
         }
 
         foreach (DI::get('Menu\Page\RootPath') as $item) {
             $links[] = static::createLink($item->route, $item->getMenuTitle());
         }
 
-        if (!empty($reverse)) {
+        if ($options['reverse']) {
             $links = array_reverse($links);
         }
 
         $html = '<ul class="breadcrumb">';
         foreach ($links as $i => $link) {
-            if ($i > 0 && !empty($delim)) {
-                $html .= '<li class="delim">' . $delim . '</li>';
+            if ($i > 0 && !empty($options['delim'])) {
+                $html .= '<li class="delim">' . $options['delim'] . '</li>';
             }
             $html .= '<li>' . $link . '</li>';
         }
@@ -112,24 +110,27 @@ class MenuPlugin
      */
     public static function functionHtml($options)
     {
-        $options = (array)$options;
-        extract($options); // showHidden, route, maxDepth, class
-        $showHidden = isset($showHidden) ? (bool)$showHidden : false;
-        $route = isset($route) ? (string)$route : '';
-        $maxDepth = isset($maxDepth) ? (int)$maxDepth : -1;
-        $class = isset($class) ? (string)$class : 'menu';
+        $options = array_merge([
+            'class' => 'menu',
+            'maxdepth' => -1,
+            'route' => '',
+            'showhidden' => false
+        ], (array)$options);
 
-        $branch = DI::get('Menu\Page\Node')->findByRoute($route);
+        // accept valid flags only
+        $options['showhidden'] = filter_var($options['showhidden'], FILTER_VALIDATE_BOOLEAN);
+
+        $branch = DI::get('Menu\Page\Node')->findByRoute($options['route']);
         $treeIterator = new Herbie\Menu\Page\Iterator\TreeIterator($branch);
 
         // using FilterCallback for better filtering of nested items
         $routeLine = DI::get('Request')->getRouteLine();
-        $callback = [new Herbie\Menu\Page\Iterator\FilterCallback($routeLine, $showHidden), 'call'];
+        $callback = [new Herbie\Menu\Page\Iterator\FilterCallback($routeLine, $options['showhidden']), 'call'];
         $filterIterator = new \RecursiveCallbackFilterIterator($treeIterator, $callback);
 
         $htmlTree = new Herbie\Menu\Page\Renderer\HtmlTree($filterIterator);
-        $htmlTree->setMaxDepth($maxDepth);
-        $htmlTree->setClass($class);
+        $htmlTree->setMaxDepth($options['maxdepth']);
+        $htmlTree->setClass($options['class']);
         $htmlTree->itemCallback = function ($node) {
             $menuItem = $node->getMenuItem();
             $href = DI::get('Url\UrlGenerator')->generate($menuItem->route);
@@ -145,11 +146,14 @@ class MenuPlugin
     public static function functionSitemap($options)
     {
         $options = array_merge([
-            'showhidden' => false,
-            'route' => '',
+            'class' => 'sitemap',
             'maxdepth' => -1,
-            'class' => 'sitemap'
+            'route' => '',
+            'showhidden' => false
         ], (array)$options);
+
+        // accept valid flags only
+        $options['showhidden'] = filter_var($options['showhidden'], FILTER_VALIDATE_BOOLEAN);
 
         $branch = DI::get('Menu\Page\Node')->findByRoute($options['route']);
         $treeIterator = new Herbie\Menu\Page\Iterator\TreeIterator($branch);
