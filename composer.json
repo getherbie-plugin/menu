@@ -4,5 +4,8 @@
     "description": "Herbie Menu Plugin.",
     "keywords": ["herbie", "plugin", "menu"],
     "type": "herbie-plugin",
-    "license": "BSD-3-Clause"
+    "license": "BSD-3-Clause",
+    "require": {
+        "getherbie/herbie": "^1.0.0"
+    }
 }
